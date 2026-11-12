@@ -181,7 +181,7 @@ class WelcomePage extends StatelessWidget {
 
             const SizedBox(height: 27),
 
-            // PILIHAN JENIS PASIEN
+            // PILIHAN PASIEN
             const Text(
               'Mulai perjalanan senyum sehatmu',
               style: TextStyle(
@@ -232,7 +232,6 @@ class WelcomePage extends StatelessWidget {
 
             const SizedBox(height: 24),
 
-            // FOOTER
             const Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -240,7 +239,7 @@ class WelcomePage extends StatelessWidget {
                 SizedBox(width: 7),
                 Flexible(
                   child: Text(
-                    'Prototipe UTS • Gunakan data identitas simulasi',
+                    'RSGM COMAL menjamin keamanan data pasien. ',
                     textAlign: TextAlign.center,
                     style: TextStyle(color: C.muted, fontSize: 10),
                   ),
@@ -255,7 +254,7 @@ class WelcomePage extends StatelessWidget {
 }
 
 // =====================================================
-// KOMPONEN BENEFIT HERO
+// KOMPONEN BENEFIT
 // =====================================================
 
 class _HeroBenefit extends StatelessWidget {
@@ -410,7 +409,6 @@ class _ToothLogoPainter extends CustomPainter {
     final w = size.width;
     final h = size.height;
 
-    // Lingkaran logo.
     canvas.drawCircle(
       Offset(w * .5, h * .5),
       w * .48,
@@ -426,7 +424,6 @@ class _ToothLogoPainter extends CustomPainter {
         ..strokeWidth = w * .025,
     );
 
-    // Bentuk gigi.
     final tooth = Path()
       ..moveTo(w * .50, h * .25)
       ..cubicTo(w * .34, h * .15, w * .19, h * .24, w * .25, h * .47)
@@ -448,7 +445,6 @@ class _ToothLogoPainter extends CustomPainter {
         ..strokeJoin = StrokeJoin.round,
     );
 
-    // Mata.
     canvas.drawCircle(
       Offset(w * .40, h * .40),
       w * .016,
@@ -461,7 +457,6 @@ class _ToothLogoPainter extends CustomPainter {
       Paint()..color = C.deep,
     );
 
-    // Senyum.
     final smile = Path()
       ..moveTo(w * .42, h * .47)
       ..quadraticBezierTo(w * .50, h * .55, w * .58, h * .47);
@@ -475,7 +470,6 @@ class _ToothLogoPainter extends CustomPainter {
         ..strokeCap = StrokeCap.round,
     );
 
-    // Kilauan.
     final sparkle = Path()
       ..moveTo(w * .78, h * .13)
       ..lineTo(w * .81, h * .20)
@@ -497,7 +491,7 @@ class _ToothLogoPainter extends CustomPainter {
 }
 
 // =====================================================
-// LOGO BESAR PADA HERO
+// LOGO BESAR HERO
 // =====================================================
 
 class ToothBadge extends StatelessWidget {
@@ -519,7 +513,7 @@ class ToothBadge extends StatelessWidget {
 }
 
 // =====================================================
-// FORM PASIEN BARU
+// HALAMAN PASIEN BARU
 // =====================================================
 
 class NewPatientPage extends StatefulWidget {
@@ -583,6 +577,10 @@ class _NewPatientPageState extends State<NewPatientPage> {
     }
   }
 
+  // =====================================================
+  // REGISTER KE LARAVEL DAN TAMPILKAN NO. RM
+  // =====================================================
+
   Future<void> submit() async {
     if (saving) return;
 
@@ -620,13 +618,96 @@ class _NewPatientPageState extends State<NewPatientPage> {
 
       if (!mounted) return;
 
+      final rmNumber = widget.store.patient?.rm;
+
+      if (rmNumber == null || rmNumber.isEmpty) {
+        throw StateError('Nomor rekam medis belum dikembalikan oleh server.');
+      }
+
+      await showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) {
+          return AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(24),
+            ),
+            title: const Text(
+              'Pendaftaran Berhasil!',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 19,
+                fontWeight: FontWeight.w800,
+                color: C.deep,
+              ),
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 75,
+                  height: 75,
+                  decoration: const BoxDecoration(
+                    color: C.mint,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.check_circle_rounded,
+                    color: C.green,
+                    size: 49,
+                  ),
+                ),
+                const SizedBox(height: 17),
+                const Text(
+                  'Nomor Rekam Medis Anda',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 12, color: C.muted),
+                ),
+                const SizedBox(height: 8),
+                SelectableText(
+                  rmNumber,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 25,
+                    fontWeight: FontWeight.w800,
+                    color: C.green,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                const Text(
+                  'Simpan nomor RM ini dengan baik. '
+                  'Ketika masuk kembali ke aplikasi, '
+                  'pilih Pasien Lama dan masukkan No. RM '
+                  'serta tanggal lahir yang terdaftar.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 11.5, height: 1.6, color: C.muted),
+                ),
+              ],
+            ),
+            actions: [
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  onPressed: () => Navigator.pop(dialogContext),
+                  child: const Text('Masuk ke Beranda'),
+                ),
+              ),
+            ],
+          );
+        },
+      );
+
+      if (!mounted) return;
+
       Navigator.of(context).popUntil((route) => route.isFirst);
     } catch (error) {
       if (mounted) {
-        snack(context, 'Tidak dapat menyimpan profil: $error', error: true);
+        snack(context, 'Pendaftaran gagal: $error', error: true);
       }
     } finally {
-      if (mounted) setState(() => saving = false);
+      if (mounted) {
+        setState(() => saving = false);
+      }
     }
   }
 
@@ -715,6 +796,7 @@ class _NewPatientPageState extends State<NewPatientPage> {
                     ),
                     const SizedBox(height: 18),
 
+                    // NIK
                     FieldLabel(
                       'NIK (16 digit)',
                       child: TextFormField(
@@ -736,6 +818,7 @@ class _NewPatientPageState extends State<NewPatientPage> {
                       ),
                     ),
 
+                    // NAMA LENGKAP
                     FieldLabel(
                       'Nama lengkap sesuai KTP/KK',
                       child: TextFormField(
@@ -751,6 +834,7 @@ class _NewPatientPageState extends State<NewPatientPage> {
                       ),
                     ),
 
+                    // TEMPAT LAHIR
                     FieldLabel(
                       'Tempat lahir',
                       child: TextFormField(
@@ -764,6 +848,7 @@ class _NewPatientPageState extends State<NewPatientPage> {
                       ),
                     ),
 
+                    // TANGGAL LAHIR
                     FieldLabel(
                       'Tanggal lahir',
                       child: FormField<DateTime>(
@@ -811,6 +896,7 @@ class _NewPatientPageState extends State<NewPatientPage> {
                       ),
                     ),
 
+                    // JENIS KELAMIN
                     FieldLabel(
                       'Jenis kelamin',
                       child: DropdownButtonFormField<String>(
@@ -834,6 +920,7 @@ class _NewPatientPageState extends State<NewPatientPage> {
                       ),
                     ),
 
+                    // NOMOR HP
                     FieldLabel(
                       'Nomor HP / WhatsApp aktif',
                       child: TextFormField(
@@ -849,6 +936,7 @@ class _NewPatientPageState extends State<NewPatientPage> {
                         ),
                         validator: (value) {
                           final length = (value ?? '').trim().length;
+
                           return length < 10 || length > 15
                               ? 'Isi nomor HP 10–15 digit'
                               : null;
@@ -867,6 +955,7 @@ class _NewPatientPageState extends State<NewPatientPage> {
                     ),
                     const SizedBox(height: 18),
 
+                    // ALAMAT LENGKAP
                     FieldLabel(
                       'Alamat lengkap',
                       child: TextFormField(
@@ -881,6 +970,7 @@ class _NewPatientPageState extends State<NewPatientPage> {
                       ),
                     ),
 
+                    // PROVINSI
                     FieldLabel(
                       'Provinsi',
                       child: TextFormField(
@@ -894,6 +984,7 @@ class _NewPatientPageState extends State<NewPatientPage> {
                       ),
                     ),
 
+                    // KABUPATEN / KOTA
                     FieldLabel(
                       'Kabupaten / Kota',
                       child: TextFormField(
@@ -907,6 +998,7 @@ class _NewPatientPageState extends State<NewPatientPage> {
                       ),
                     ),
 
+                    // KECAMATAN
                     FieldLabel(
                       'Kecamatan',
                       child: TextFormField(
@@ -920,6 +1012,7 @@ class _NewPatientPageState extends State<NewPatientPage> {
                       ),
                     ),
 
+                    // KELURAHAN / DESA
                     FieldLabel(
                       'Kelurahan / Desa',
                       child: TextFormField(
@@ -935,14 +1028,15 @@ class _NewPatientPageState extends State<NewPatientPage> {
 
                     CheckboxListTile(
                       value: agree,
-                      onChanged: (value) =>
-                          setState(() => agree = value ?? false),
+                      onChanged: (value) {
+                        setState(() => agree = value ?? false);
+                      },
                       controlAffinity: ListTileControlAffinity.leading,
                       contentPadding: EdgeInsets.zero,
                       title: const Text(
-                        'Saya memahami bahwa aplikasi ini merupakan '
-                        'simulasi dan tidak menggunakan identitas '
-                        'pasien sungguhan.',
+                        'Saya memahami bahwa aplikasi ini '
+                        'merupakan simulasi dan tidak menggunakan '
+                        'identitas pasien sungguhan.',
                         style: TextStyle(fontSize: 11, height: 1.5),
                       ),
                     ),
@@ -952,11 +1046,13 @@ class _NewPatientPageState extends State<NewPatientPage> {
             ),
 
             const SizedBox(height: 18),
+
             FilledButton.icon(
               onPressed: saving ? null : submit,
               icon: const Icon(Icons.check_circle_outline_rounded),
               label: Text(saving ? 'Menyimpan...' : 'Simpan Profil & Lanjut'),
             ),
+
             const SizedBox(height: 20),
           ],
         ),
@@ -964,6 +1060,10 @@ class _NewPatientPageState extends State<NewPatientPage> {
     );
   }
 }
+
+// =====================================================
+// JUDUL BAGIAN FORMULIR
+// =====================================================
 
 class _FormSection extends StatelessWidget {
   final IconData icon;
@@ -1015,7 +1115,7 @@ class _FormSection extends StatelessWidget {
 }
 
 // =====================================================
-// FORM PASIEN LAMA - TETAP
+// HALAMAN PASIEN LAMA - LOGIN MELALUI LARAVEL
 // =====================================================
 
 class OldPatientPage extends StatefulWidget {
@@ -1029,6 +1129,7 @@ class OldPatientPage extends StatefulWidget {
 
 class _OldPatientPageState extends State<OldPatientPage> {
   final rm = TextEditingController();
+
   DateTime? birth;
   bool checking = false;
 
@@ -1038,7 +1139,13 @@ class _OldPatientPageState extends State<OldPatientPage> {
     super.dispose();
   }
 
+  // =====================================================
+  // LOGIN PASIEN LAMA
+  // =====================================================
+
   Future<void> check() async {
+    if (checking) return;
+
     if (rm.text.trim().isEmpty || birth == null) {
       snack(context, 'Isi nomor RM dan tanggal lahir.', error: true);
       return;
@@ -1046,24 +1153,44 @@ class _OldPatientPageState extends State<OldPatientPage> {
 
     setState(() => checking = true);
 
-    final ok = await widget.store.identifyOld(
-      rm.text.trim(),
-      DemoStore.dateKey(birth!),
+    try {
+      final success = await widget.store.identifyOld(
+        rm.text.trim().toUpperCase(),
+        DemoStore.dateKey(birth!),
+      );
+
+      if (!mounted) return;
+
+      if (success) {
+        Navigator.of(context).popUntil((route) => route.isFirst);
+      } else {
+        snack(
+          context,
+          'Nomor RM atau tanggal lahir tidak sesuai.',
+          error: true,
+        );
+      }
+    } catch (error) {
+      if (mounted) {
+        snack(context, 'Gagal masuk: $error', error: true);
+      }
+    } finally {
+      if (mounted) {
+        setState(() => checking = false);
+      }
+    }
+  }
+
+  Future<void> pickBirthDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: birth ?? DateTime(2002, 1, 1),
+      firstDate: DateTime(1920),
+      lastDate: DateTime.now(),
     );
 
-    if (!mounted) return;
-
-    setState(() => checking = false);
-
-    if (ok) {
-      Navigator.popUntil(context, (route) => route.isFirst);
-    } else {
-      snack(
-        context,
-        'Data tidak ditemukan. Periksa kembali nomor RM '
-        'dan tanggal lahir.',
-        error: true,
-      );
+    if (picked != null && mounted) {
+      setState(() => birth = picked);
     }
   }
 
@@ -1077,9 +1204,10 @@ class _OldPatientPageState extends State<OldPatientPage> {
           children: [
             const HeaderText(
               'Temukan profil Anda',
-              'Masukkan identitas pasien lama untuk '
-                  'mencoba alur simulasi.',
+              'Masukkan nomor rekam medis dan tanggal lahir '
+                  'yang telah terdaftar di RSGM COMAL.',
             ),
+
             const SizedBox(height: 20),
 
             SheetCard(
@@ -1087,12 +1215,13 @@ class _OldPatientPageState extends State<OldPatientPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   FieldLabel(
-                    'Nomor rekam medis dummy',
+                    'Nomor Rekam Medis (No. RM)',
                     child: TextField(
                       controller: rm,
                       textCapitalization: TextCapitalization.characters,
                       decoration: const InputDecoration(
-                        hintText: 'Contoh: RM-00025',
+                        hintText: 'Contoh: RM-000001',
+                        prefixIcon: Icon(Icons.badge_outlined, color: C.green),
                       ),
                     ),
                   ),
@@ -1100,21 +1229,14 @@ class _OldPatientPageState extends State<OldPatientPage> {
                   FieldLabel(
                     'Tanggal lahir',
                     child: InkWell(
-                      onTap: () async {
-                        final picked = await showDatePicker(
-                          context: context,
-                          initialDate: DateTime(2002, 5, 15),
-                          firstDate: DateTime(1920),
-                          lastDate: DateTime.now(),
-                        );
-
-                        if (picked != null && mounted) {
-                          setState(() => birth = picked);
-                        }
-                      },
+                      onTap: pickBirthDate,
                       child: InputDecorator(
                         decoration: const InputDecoration(
-                          suffixIcon: Icon(Icons.calendar_month_outlined),
+                          prefixIcon: Icon(
+                            Icons.calendar_month_outlined,
+                            color: C.green,
+                          ),
+                          suffixIcon: Icon(Icons.keyboard_arrow_down),
                         ),
                         child: Text(
                           birth == null
@@ -1132,46 +1254,37 @@ class _OldPatientPageState extends State<OldPatientPage> {
                     onPressed: checking ? null : check,
                     icon: const Icon(Icons.login_rounded),
                     label: Text(
-                      checking ? 'Memeriksa...' : 'Cari Profil Pasien',
+                      checking ? 'Memeriksa data...' : 'Masuk ke Profil Pasien',
                     ),
                   ),
                 ],
               ),
             ),
 
-            const SizedBox(height: 15),
+            const SizedBox(height: 16),
 
+            // HANYA PANDUAN LOGIN.
+            // KARTU AKUN BUDI SANTOSO DUMMY SUDAH DIHAPUS.
             const SheetCard(
-              child: Column(
+              child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      Icon(Icons.info_outline, color: C.green, size: 20),
-                      SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'Akun pasien lama untuk demo',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w700,
-                            fontSize: 12,
-                          ),
-                        ),
+                  Icon(Icons.info_outline_rounded, color: C.green, size: 22),
+                  SizedBox(width: 11),
+                  Expanded(
+                    child: Text(
+                      'Gunakan No. RM yang diperoleh setelah '
+                      'pendaftaran sebagai Pasien Baru. '
+                      'Masukkan tanggal lahir yang sama '
+                      'dengan data yang tersimpan. '
+                      'Gunakan identitas fiktif selama '
+                      'pengujian aplikasi.',
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        height: 1.6,
+                        color: C.muted,
                       ),
-                    ],
-                  ),
-                  SizedBox(height: 10),
-                  Text(
-                    'No. RM: RM-00025\n'
-                    'Tanggal lahir: 15 Mei 2002\n'
-                    'Nama: Budi Santoso',
-                    style: TextStyle(fontSize: 12, height: 1.8, color: C.muted),
-                  ),
-                  SizedBox(height: 8),
-                  Text(
-                    'Simulasi ini bukan verifikasi '
-                    'identitas untuk layanan nyata.',
-                    style: TextStyle(color: C.muted, fontSize: 11),
+                    ),
                   ),
                 ],
               ),

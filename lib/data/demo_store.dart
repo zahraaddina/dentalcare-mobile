@@ -1,24 +1,27 @@
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/app_models.dart';
+import '../services/patient_api.dart';
 
 class DemoStore extends ChangeNotifier {
   Patient? patient;
   List<Booking> bookings = [];
   bool ready = false;
 
-  static const _patientKey = 'rsgm_demo_patient_v2';
   static const _bookingsKey = 'rsgm_demo_bookings_v2';
   static const _paymentKey = 'rsgm_demo_payment_v1';
-  static const _patientDetailsKey = 'rsgm_patient_details_v1';
+  static const _tokenKey = 'rsgm_patient_token_v1';
 
-  Map<String, Map<String, String>> bookingPayments = {};
+  static const _secure = FlutterSecureStorage();
 
-  // Data tambahan identitas pasien.
+  String? _token;
+
   Map<String, String> patientDetails = {};
+  Map<String, Map<String, String>> bookingPayments = {};
 
   String patientDetail(String key) {
     final value = patientDetails[key];
@@ -26,39 +29,100 @@ class DemoStore extends ChangeNotifier {
   }
 
   // =====================================================
-  // MEMUAT DATA LOKAL
+  // DATA PASIEN DARI LARAVEL
+  // =====================================================
+
+  void _applyPatient(Map<String, dynamic> data) {
+    final patientId = int.parse(data['id'].toString());
+
+    patient = Patient(
+      id: 'PS-${patientId.toString().padLeft(4, '0')}',
+      name: data['name'].toString(),
+      birth: data['birth'].toString(),
+      gender: data['gender'].toString(),
+      phone: data['phone'].toString(),
+      address: data['address'].toString(),
+      rm: data['rm']?.toString(),
+    );
+
+    patientDetails = {
+      'nik': data['nik']?.toString() ?? '',
+      'birthPlace': data['birthPlace']?.toString() ?? '',
+      'province': data['province']?.toString() ?? '',
+      'city': data['city']?.toString() ?? '',
+      'district': data['district']?.toString() ?? '',
+      'village': data['village']?.toString() ?? '',
+    };
+  }
+
+  // =====================================================
+  // MEMULIHKAN SESI PASIEN
   // =====================================================
 
   Future<void> initialize() async {
-    final prefs = await SharedPreferences.getInstance();
+    ready = false;
 
-    final savedPatient = prefs.getString(_patientKey);
-    if (savedPatient != null) {
-      try {
-        patient = Patient.fromJson(
-          Map<String, dynamic>.from(jsonDecode(savedPatient) as Map),
-        );
-      } catch (_) {
-        patient = null;
+    try {
+      _token = await _secure.read(key: _tokenKey);
+
+      if (_token != null && _token!.isNotEmpty) {
+        final result = await PatientApi.me(_token!);
+
+        _applyPatient(Map<String, dynamic>.from(result['patient'] as Map));
+
+        await _loadLocalBookings();
       }
+    } on PatientApiException catch (error) {
+      patient = null;
+      patientDetails = {};
+      bookings = [];
+      bookingPayments = {};
+
+      if (error.statusCode == 401) {
+        await _secure.delete(key: _tokenKey);
+        _token = null;
+      }
+    } catch (_) {
+      patient = null;
+      patientDetails = {};
+      bookings = [];
+      bookingPayments = {};
     }
 
-    final savedBookings = prefs.getString(_bookingsKey);
-    if (savedBookings != null) {
+    ready = true;
+    notifyListeners();
+  }
+
+  // =====================================================
+  // DATA BOOKING MASIH LOKAL
+  // =====================================================
+
+  Future<void> _loadLocalBookings() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    final rawBookings = prefs.getString(_bookingsKey);
+    final rawPayments = prefs.getString(_paymentKey);
+
+    bookings = [];
+    bookingPayments = {};
+
+    if (rawBookings != null) {
       try {
-        bookings = (jsonDecode(savedBookings) as List)
-            .map((e) => Booking.fromJson(Map<String, dynamic>.from(e as Map)))
+        bookings = (jsonDecode(rawBookings) as List)
+            .map(
+              (value) =>
+                  Booking.fromJson(Map<String, dynamic>.from(value as Map)),
+            )
             .toList();
       } catch (_) {
         bookings = [];
       }
     }
 
-    final savedPayments = prefs.getString(_paymentKey);
-    if (savedPayments != null) {
+    if (rawPayments != null) {
       try {
         final decoded = Map<String, dynamic>.from(
-          jsonDecode(savedPayments) as Map,
+          jsonDecode(rawPayments) as Map,
         );
 
         bookingPayments = decoded.map(
@@ -68,49 +132,23 @@ class DemoStore extends ChangeNotifier {
         bookingPayments = {};
       }
     }
-
-    final savedDetails = prefs.getString(_patientDetailsKey);
-    if (savedDetails != null) {
-      try {
-        patientDetails = Map<String, String>.from(
-          jsonDecode(savedDetails) as Map,
-        );
-      } catch (_) {
-        patientDetails = {};
-      }
-    }
-
-    ready = true;
-    notifyListeners();
   }
 
-  // =====================================================
-  // MENYIMPAN DATA LOKAL
-  // =====================================================
-
-  Future<void> _save() async {
+  Future<void> _saveLocalBookings() async {
     final prefs = await SharedPreferences.getInstance();
-
-    if (patient == null) {
-      await prefs.remove(_patientKey);
-    } else {
-      await prefs.setString(_patientKey, jsonEncode(patient!.toJson()));
-    }
 
     await prefs.setString(
       _bookingsKey,
-      jsonEncode(bookings.map((b) => b.toJson()).toList()),
+      jsonEncode(bookings.map((booking) => booking.toJson()).toList()),
     );
 
     await prefs.setString(_paymentKey, jsonEncode(bookingPayments));
 
-    await prefs.setString(_patientDetailsKey, jsonEncode(patientDetails));
-
     notifyListeners();
   }
 
   // =====================================================
-  // PENDAFTARAN PASIEN BARU
+  // REGISTER PASIEN BARU
   // =====================================================
 
   Future<void> register({
@@ -126,102 +164,123 @@ class DemoStore extends ChangeNotifier {
     String district = '',
     String village = '',
   }) async {
-    patient = Patient(
-      id: 'PS-0001',
+    final result = await PatientApi.register(
+      nik: nik,
       name: name,
-      birth: birth,
+      birthPlace: birthPlace,
+      birthDate: birth,
       gender: gender,
       phone: phone,
       address: address,
+      province: province,
+      city: city,
+      district: district,
+      village: village,
     );
 
-    patientDetails = {
-      'nik': nik,
-      'birthPlace': birthPlace,
-      'province': province,
-      'city': city,
-      'district': district,
-      'village': village,
-    };
+    final token = result['token'].toString();
 
+    // Simpan token lebih dulu.
+    await _secure.write(key: _tokenKey, value: token);
+
+    _token = token;
+
+    _applyPatient(Map<String, dynamic>.from(result['patient'] as Map));
+
+    // Booking lama adalah simulasi lokal.
     bookings = [];
     bookingPayments = {};
+    await _saveLocalBookings();
 
-    await _save();
+    notifyListeners();
   }
 
   // =====================================================
-  // PASIEN LAMA (DATA DEMO)
+  // LOGIN PASIEN LAMA
   // =====================================================
 
   Future<bool> identifyOld(String rm, String birth) async {
-    if (rm.trim().toUpperCase() != 'RM-00025' || birth != '2002-05-15') {
-      return false;
+    Map<String, dynamic> result;
+
+    try {
+      result = await PatientApi.login(
+        rm: rm.trim().toUpperCase(),
+        birthDate: birth,
+      );
+    } on PatientApiException catch (error) {
+      if (error.statusCode == 422 || error.statusCode == 401) {
+        return false;
+      }
+
+      rethrow;
     }
 
-    patient = const Patient(
-      id: 'PS-0025',
-      name: 'Budi Santoso',
-      birth: '2002-05-15',
-      gender: 'Laki-laki',
-      phone: '0812-0000-0025',
-      address: 'Alamat simulasi, Comal',
-      rm: 'RM-00025',
-    );
+    final token = result['token'].toString();
 
-    // Detail yang tidak tersedia dibiarkan kosong.
-    patientDetails = {};
+    await _secure.write(key: _tokenKey, value: token);
 
-    final previousDate = DateTime.now().subtract(const Duration(days: 23));
+    _token = token;
 
-    bookings = [
-      Booking(
-        id: 'RSGM-DEMO-0001',
-        patientId: patient!.id,
-        poliId: 'umum',
-        date: dateKey(previousDate),
-        session: 'pagi',
-        queue: 'A-003',
-        status: 'completed',
-        createdAt: previousDate.toIso8601String(),
-      ),
-    ];
+    _applyPatient(Map<String, dynamic>.from(result['patient'] as Map));
 
-    bookingPayments = {
-      'RSGM-DEMO-0001': {'method': 'umum'},
-    };
+    // Booking masih lokal, belum dikembalikan oleh backend.
+    bookings = [];
+    bookingPayments = {};
+    await _saveLocalBookings();
 
-    await _save();
+    notifyListeners();
+
     return true;
   }
 
   // =====================================================
-  // EDIT KONTAK
+  // EDIT KONTAK, TERSIMPAN KE MYSQL
   // =====================================================
 
   Future<void> editContact(String phone, String address) async {
-    if (patient == null) return;
+    if (patient == null || _token == null) {
+      throw StateError('Sesi pasien tidak ditemukan');
+    }
 
-    patient = patient!.copyWith(phone: phone, address: address);
+    final result = await PatientApi.editContact(
+      token: _token!,
+      phone: phone,
+      address: address,
+    );
 
-    await _save();
+    _applyPatient(Map<String, dynamic>.from(result['patient'] as Map));
+
+    notifyListeners();
   }
 
   // =====================================================
-  // KELUAR
+  // LOGOUT: DATA DATABASE TIDAK DIHAPUS
   // =====================================================
 
   Future<void> signOut() async {
+    final token = _token;
+
+    if (token != null) {
+      try {
+        await PatientApi.logout(token);
+      } catch (_) {
+        // Sesi lokal tetap dihapus jika server tidak tersedia.
+      }
+    }
+
+    await _secure.delete(key: _tokenKey);
+    _token = null;
+
     patient = null;
+    patientDetails = {};
     bookings = [];
     bookingPayments = {};
-    patientDetails = {};
 
-    await _save();
+    notifyListeners();
   }
 
   // =====================================================
-  // DATA BOOKING
+  // BOOKING MILIK PASIEN
   // =====================================================
 
   List<Booking> get ownBookings =>
@@ -248,7 +307,7 @@ class DemoStore extends ChangeNotifier {
   }
 
   // =====================================================
-  // INFORMASI PEMBAYARAN
+  // PEMBAYARAN BOOKING (SIMULASI)
   // =====================================================
 
   Map<String, String> paymentOf(String bookingId) {
@@ -261,23 +320,21 @@ class DemoStore extends ChangeNotifier {
     switch (method) {
       case 'bpjs':
         return 'BPJS Kesehatan';
-
       case 'asuransi':
         return 'Asuransi Lain';
-
       default:
         return 'Umum / Mandiri';
     }
   }
 
   // =====================================================
-  // JADWAL DAN KUOTA
+  // TANGGAL, JADWAL, DAN KUOTA SIMULASI
   // =====================================================
 
-  static String dateKey(DateTime d) {
-    return '${d.year.toString().padLeft(4, '0')}-'
-        '${d.month.toString().padLeft(2, '0')}-'
-        '${d.day.toString().padLeft(2, '0')}';
+  static String dateKey(DateTime date) {
+    return '${date.year.toString().padLeft(4, '0')}-'
+        '${date.month.toString().padLeft(2, '0')}-'
+        '${date.day.toString().padLeft(2, '0')}';
   }
 
   int occupied(String poli, String date, String session) {
@@ -319,7 +376,7 @@ class DemoStore extends ChangeNotifier {
   }
 
   // =====================================================
-  // MEMBUAT PENDAFTARAN KUNJUNGAN
+  // MEMBUAT BOOKING (BELUM KE MYSQL)
   // =====================================================
 
   Future<Booking> createBooking(
@@ -334,20 +391,20 @@ class DemoStore extends ChangeNotifier {
     String policyNumber = '',
   }) async {
     if (patient == null) {
-      throw StateError('Profil belum tersedia');
+      throw StateError('Profil pasien belum tersedia');
     }
 
-    final selected = DateTime.tryParse(date);
+    final selectedDate = DateTime.tryParse(date);
     final now = DateTime.now();
 
-    final startOfToday = DateTime(now.year, now.month, now.day);
+    final today = DateTime(now.year, now.month, now.day);
 
-    if (selected == null || selected.isBefore(startOfToday)) {
+    if (selectedDate == null || selectedDate.isBefore(today)) {
       throw StateError('Tanggal kunjungan tidak valid');
     }
 
     if (available(poli, date, session) <= 0) {
-      throw StateError('Kuota sesi ini penuh');
+      throw StateError('Kuota sesi penuh');
     }
 
     if (isDuplicate(poli, date)) {
@@ -398,13 +455,13 @@ class DemoStore extends ChangeNotifier {
       'policyNumber': policyNumber.trim(),
     };
 
-    await _save();
+    await _saveLocalBookings();
 
     return booking;
   }
 
   // =====================================================
-  // BATAL PENDAFTARAN
+  // BATAL BOOKING SIMULASI
   // =====================================================
 
   Future<void> cancel(String id) async {
@@ -416,15 +473,14 @@ class DemoStore extends ChangeNotifier {
       return;
     }
 
-    // Booking yang dibatalkan langsung hilang.
     bookings.removeAt(index);
     bookingPayments.remove(id);
 
-    await _save();
+    await _saveLocalBookings();
   }
 
   // =====================================================
-  // SIMULASI STATUS KHUSUS DEBUG
+  // SIMULASI STATUS (TIDAK DIPAKAI UI PASIEN)
   // =====================================================
 
   Future<void> simulateNext(String id) async {
@@ -442,11 +498,10 @@ class DemoStore extends ChangeNotifier {
     };
 
     final nextStatus = transitions[bookings[index].status];
-
     if (nextStatus == null) return;
 
     bookings[index] = bookings[index].withStatus(nextStatus);
 
-    await _save();
+    await _saveLocalBookings();
   }
 }

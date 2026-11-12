@@ -14,6 +14,7 @@ import 'profile_page.dart';
 
 class ShellPage extends StatefulWidget {
   final DemoStore store;
+
   const ShellPage({super.key, required this.store});
 
   @override
@@ -28,6 +29,7 @@ class _ShellPageState extends State<ShellPage> {
       context,
       MaterialPageRoute(builder: (_) => BookingFlowPage(store: widget.store)),
     );
+
     if (mounted) setState(() {});
   }
 
@@ -93,7 +95,7 @@ class _ShellPageState extends State<ShellPage> {
 }
 
 // ======================================================
-// DATA PELAYANAN GIGI - SIMULASI
+// DATA PELAYANAN GIGI
 // ======================================================
 
 class DentalService {
@@ -101,8 +103,15 @@ class DentalService {
   final String description;
   final String detail;
   final IconData icon;
+  final String image;
 
-  const DentalService(this.title, this.description, this.detail, this.icon);
+  const DentalService(
+    this.title,
+    this.description,
+    this.detail,
+    this.icon,
+    this.image,
+  );
 }
 
 const dentalServices = <DentalService>[
@@ -114,6 +123,7 @@ const dentalServices = <DentalService>[
         'dibersihkan dengan sikat gigi.\n\n'
         'Tindakan dilakukan sesuai hasil pemeriksaan dokter gigi.',
     Icons.cleaning_services_outlined,
+    'assets/images/scaling.avif',
   ),
   DentalService(
     'Penambalan Gigi',
@@ -123,6 +133,7 @@ const dentalServices = <DentalService>[
         'Dokter akan memeriksa apakah gigi dapat ditambal '
         'atau membutuhkan perawatan lainnya.',
     Icons.healing_outlined,
+    'assets/images/filling.avif',
   ),
   DentalService(
     'Perawatan Ortodonti',
@@ -132,6 +143,7 @@ const dentalServices = <DentalService>[
         'Penggunaan kawat gigi atau alat ortodonti lain '
         'ditentukan setelah pemeriksaan dan perencanaan.',
     Icons.grid_on_rounded,
+    'assets/images/braces.avif',
   ),
   DentalService(
     'Pencabutan Gigi',
@@ -142,6 +154,7 @@ const dentalServices = <DentalService>[
         'Dokter akan memeriksa kemungkinan perawatan '
         'lain terlebih dahulu.',
     Icons.medical_services_outlined,
+    'assets/images/extraction.avif',
   ),
   DentalService(
     'Perawatan Saluran Akar',
@@ -151,6 +164,7 @@ const dentalServices = <DentalService>[
         'Kebutuhan tindakan ditentukan melalui pemeriksaan '
         'oleh dokter gigi.',
     Icons.health_and_safety_outlined,
+    'assets/images/root_canal.avif',
   ),
   DentalService(
     'Perawatan Gigi Anak',
@@ -159,11 +173,12 @@ const dentalServices = <DentalService>[
         'pencegahan masalah gigi, edukasi, dan perawatan '
         'sesuai usia serta kondisi anak.',
     Icons.child_care_rounded,
+    'assets/images/kids.avif',
   ),
 ];
 
 // ======================================================
-// DATA EDUKASI
+// DATA ARTIKEL EDUKASI
 // ======================================================
 
 class DentalArticle {
@@ -172,6 +187,7 @@ class DentalArticle {
   final String summary;
   final String duration;
   final IconData icon;
+  final String image;
   final List<String> paragraphs;
   final String tipTitle;
   final String tip;
@@ -182,6 +198,7 @@ class DentalArticle {
     required this.summary,
     required this.duration,
     required this.icon,
+    required this.image,
     required this.paragraphs,
     required this.tipTitle,
     required this.tip,
@@ -195,6 +212,7 @@ const dentalArticles = <DentalArticle>[
     summary: 'Pemeriksaan berkala membantu mengenali masalah gigi lebih awal.',
     duration: '3 menit',
     icon: Icons.event_available_rounded,
+    image: 'assets/images/checkup.avif',
     paragraphs: [
       'Banyak orang baru mengunjungi dokter gigi ketika '
           'merasakan sakit. Padahal, beberapa masalah gigi '
@@ -219,6 +237,7 @@ const dentalArticles = <DentalArticle>[
     summary: 'Kebiasaan sederhana untuk menjaga kebersihan gigi dan gusi.',
     duration: '2 menit',
     icon: Icons.cleaning_services_rounded,
+    image: 'assets/images/brushing.avif',
     paragraphs: [
       'Menyikat gigi secara teratur merupakan salah satu '
           'langkah penting untuk menjaga kesehatan gigi dan mulut.',
@@ -240,6 +259,7 @@ const dentalArticles = <DentalArticle>[
     summary: 'Jangan abaikan nyeri gigi, gusi berdarah, dan gigi sensitif.',
     duration: '3 menit',
     icon: Icons.health_and_safety_outlined,
+    image: 'assets/images/symptoms.avif',
     paragraphs: [
       'Nyeri gigi, gusi berdarah, gigi sensitif, '
           'dan bau mulut yang menetap dapat menjadi alasan '
@@ -258,6 +278,50 @@ const dentalArticles = <DentalArticle>[
         'Dokter tetap perlu melakukan pemeriksaan.',
   ),
 ];
+
+// ======================================================
+// KOMPONEN FOTO DARI ASSETS
+// ======================================================
+
+class DentalPhoto extends StatelessWidget {
+  final String image;
+  final double height;
+  final double radius;
+
+  const DentalPhoto({
+    super.key,
+    required this.image,
+    this.height = 140,
+    this.radius = 18,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(radius),
+      child: SizedBox(
+        width: double.infinity,
+        height: height,
+        child: Image.asset(
+          image,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) {
+            return Container(
+              alignment: Alignment.center,
+              color: C.mint,
+              padding: const EdgeInsets.all(12),
+              child: const Text(
+                'Gambar belum tersedia',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: C.green, fontSize: 11),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
 
 // ======================================================
 // BERANDA
@@ -288,34 +352,34 @@ class HomeTab extends StatelessWidget {
           child: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                DentalIllustration(icon: service.icon, size: 100),
-                const SizedBox(height: 16),
+                DentalPhoto(image: service.image, height: 190, radius: 19),
+                const SizedBox(height: 18),
                 Text(
                   service.title,
-                  textAlign: TextAlign.center,
                   style: const TextStyle(
-                    fontSize: 20,
+                    fontSize: 21,
                     fontWeight: FontWeight.w800,
                     color: C.deep,
                   ),
                 ),
-                const SizedBox(height: 15),
+                const SizedBox(height: 13),
                 Text(
                   service.detail,
                   style: const TextStyle(
                     fontSize: 13,
-                    height: 1.7,
+                    height: 1.8,
                     color: C.muted,
                   ),
                 ),
-                const SizedBox(height: 15),
+                const SizedBox(height: 16),
                 const Text(
                   'Informasi layanan simulasi. '
                   'Tindakan ditentukan setelah pemeriksaan.',
                   style: TextStyle(fontSize: 11, color: C.muted),
                 ),
-                const SizedBox(height: 18),
+                const SizedBox(height: 20),
                 SizedBox(
                   width: double.infinity,
                   child: FilledButton(
@@ -339,6 +403,7 @@ class HomeTab extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 18, 20, 30),
       children: [
+        // HEADER
         Row(
           children: [
             Container(
@@ -376,6 +441,7 @@ class HomeTab extends StatelessWidget {
             ),
           ],
         ),
+
         const SizedBox(height: 26),
         Text(
           'Halo, $name!',
@@ -438,8 +504,9 @@ class HomeTab extends StatelessWidget {
                   const SizedBox(
                     width: 230,
                     child: Text(
-                      'Ceritakan keluhan jika ada, pilih jadwal, '
-                      'lalu dapatkan tiket reservasi.',
+                      'Ceritakan keluhan jika ada, '
+                      'pilih jadwal, lalu dapatkan '
+                      'tiket reservasi.',
                       style: TextStyle(
                         color: Color(0xFFE0F5E9),
                         fontSize: 11.5,
@@ -462,11 +529,13 @@ class HomeTab extends StatelessWidget {
             ],
           ),
         ),
+
         const SizedBox(height: 27),
 
-        // KUNJUNGAN
+        // KUNJUNGAN MENDATANG
         const SectionTitle('Kunjungan Mendatang'),
         const SizedBox(height: 12),
+
         if (next == null)
           const SheetCard(
             child: Row(
@@ -488,9 +557,10 @@ class HomeTab extends StatelessWidget {
             onTap: () => onDetail(next),
             child: BookingTile(booking: next),
           ),
+
         const SizedBox(height: 28),
 
-        // KATALOG PELAYANAN
+        // KATALOG PELAYANAN BERGAMBAR
         const SectionTitle('Pelayanan Kesehatan Gigi'),
         const SizedBox(height: 6),
         const Text(
@@ -498,6 +568,7 @@ class HomeTab extends StatelessWidget {
           style: TextStyle(fontSize: 11.5, color: C.muted),
         ),
         const SizedBox(height: 16),
+
         GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
@@ -506,19 +577,21 @@ class HomeTab extends StatelessWidget {
             crossAxisCount: 2,
             crossAxisSpacing: 12,
             mainAxisSpacing: 12,
-            mainAxisExtent: 255,
+            mainAxisExtent: 275,
           ),
           itemBuilder: (context, index) {
             final service = dentalServices[index];
+
             return DentalServiceCard(
               service: service,
               onTap: () => openService(context, service),
             );
           },
         ),
+
         const SizedBox(height: 28),
 
-        // EDUKASI
+        // ARTIKEL BERGAMBAR
         const Row(
           children: [
             Icon(Icons.menu_book_rounded, color: C.green, size: 21),
@@ -537,13 +610,15 @@ class HomeTab extends StatelessWidget {
         ),
         const SizedBox(height: 6),
         const Text(
-          'Artikel dan panduan sederhana untuk menjaga kesehatan gigi.',
+          'Artikel dan panduan sederhana untuk '
+          'menjaga kesehatan gigi.',
           style: TextStyle(fontSize: 11.5, color: C.muted, height: 1.5),
         ),
         const SizedBox(height: 16),
+
         ...dentalArticles.map(
           (article) => Padding(
-            padding: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.only(bottom: 14),
             child: DentalArticleCard(
               article: article,
               onTap: () => Navigator.push(
@@ -555,23 +630,8 @@ class HomeTab extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(height: 12),
-        const SheetCard(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(Icons.info_outline_rounded, color: C.green),
-              SizedBox(width: 11),
-              Expanded(
-                child: Text(
-                  '',
-                  style: TextStyle(fontSize: 11, color: C.muted, height: 1.6),
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 18),
+
+        const SizedBox(height: 20),
         const Center(
           child: Text(
             'RSGM COMAL • Prototipe Tugas UTS',
@@ -584,7 +644,7 @@ class HomeTab extends StatelessWidget {
 }
 
 // ======================================================
-// KARTU PELAYANAN
+// KARTU PELAYANAN DENGAN FOTO
 // ======================================================
 
 class DentalServiceCard extends StatelessWidget {
@@ -606,40 +666,40 @@ class DentalServiceCard extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(20),
         child: Container(
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
             border: Border.all(color: C.line),
             borderRadius: BorderRadius.circular(20),
           ),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              DentalIllustration(icon: service.icon, size: 74),
-              const SizedBox(height: 12),
+              DentalPhoto(image: service.image, height: 116, radius: 13),
+              const SizedBox(height: 11),
               Text(
                 service.title,
-                textAlign: TextAlign.center,
                 maxLines: 2,
+                overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
                   fontSize: 12,
+                  height: 1.25,
                   fontWeight: FontWeight.w800,
                   color: C.deep,
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 7),
               Expanded(
                 child: Text(
                   service.description,
-                  textAlign: TextAlign.center,
-                  maxLines: 4,
+                  maxLines: 3,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     fontSize: 10.2,
-                    height: 1.5,
+                    height: 1.4,
                     color: C.muted,
                   ),
                 ),
               ),
-              const SizedBox(height: 8),
               const Text(
                 'Baca selengkapnya',
                 style: TextStyle(
@@ -657,7 +717,7 @@ class DentalServiceCard extends StatelessWidget {
 }
 
 // ======================================================
-// KARTU ARTIKEL
+// KARTU ARTIKEL DENGAN FOTO SAMPUL
 // ======================================================
 
 class DentalArticleCard extends StatelessWidget {
@@ -679,7 +739,7 @@ class DentalArticleCard extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(20),
         child: Container(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(20),
             border: Border.all(color: C.line),
@@ -687,60 +747,36 @@ class DentalArticleCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              DentalPhoto(image: article.image, height: 180, radius: 15),
+              const SizedBox(height: 14),
               Row(
                 children: [
                   ArticleTag(article.category),
                   const Spacer(),
-                  const Icon(Icons.schedule_rounded, size: 15, color: C.green),
-                  const SizedBox(width: 4),
                   Text(
                     'Baca ${article.duration}',
                     style: const TextStyle(fontSize: 10, color: C.muted),
                   ),
                 ],
               ),
-              const SizedBox(height: 14),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    width: 60,
-                    height: 60,
-                    decoration: BoxDecoration(
-                      color: C.mint,
-                      borderRadius: BorderRadius.circular(15),
-                    ),
-                    child: const Center(
-                      child: ToothIcon(size: 43, color: C.green),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          article.title,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w800,
-                            color: C.deep,
-                            height: 1.4,
-                          ),
-                        ),
-                        const SizedBox(height: 5),
-                        Text(
-                          article.summary,
-                          style: const TextStyle(
-                            fontSize: 11,
-                            color: C.muted,
-                            height: 1.5,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+              const SizedBox(height: 12),
+              Text(
+                article.title,
+                style: const TextStyle(
+                  fontSize: 15,
+                  height: 1.35,
+                  fontWeight: FontWeight.w800,
+                  color: C.deep,
+                ),
+              ),
+              const SizedBox(height: 7),
+              Text(
+                article.summary,
+                style: const TextStyle(
+                  fontSize: 11.5,
+                  height: 1.6,
+                  color: C.muted,
+                ),
               ),
               const SizedBox(height: 13),
               const Row(
@@ -798,6 +834,7 @@ class DentalArticlePage extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
+
             Container(
               padding: const EdgeInsets.all(13),
               decoration: BoxDecoration(
@@ -827,7 +864,8 @@ class DentalArticlePage extends StatelessWidget {
                           ),
                         ),
                         Text(
-                          'Materi simulasi • ${article.duration} baca',
+                          'Materi simulasi • '
+                          '${article.duration} baca',
                           style: const TextStyle(
                             color: C.muted,
                             fontSize: 10.5,
@@ -839,32 +877,13 @@ class DentalArticlePage extends StatelessWidget {
                 ],
               ),
             ),
+
             const SizedBox(height: 18),
-            Container(
-              height: 195,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [C.mint, Color(0xFFD4F5E7)],
-                ),
-                borderRadius: BorderRadius.circular(22),
-              ),
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  const ToothIcon(size: 140, color: C.green),
-                  Positioned(
-                    right: 45,
-                    bottom: 24,
-                    child: CircleAvatar(
-                      radius: 27,
-                      backgroundColor: Colors.white,
-                      child: Icon(article.icon, color: C.green, size: 28),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+
+            DentalPhoto(image: article.image, height: 215, radius: 22),
+
             const SizedBox(height: 23),
+
             ...article.paragraphs.map(
               (paragraph) => Padding(
                 padding: const EdgeInsets.only(bottom: 16),
@@ -878,6 +897,7 @@ class DentalArticlePage extends StatelessWidget {
                 ),
               ),
             ),
+
             Container(
               padding: const EdgeInsets.all(17),
               decoration: BoxDecoration(
@@ -918,10 +938,12 @@ class DentalArticlePage extends StatelessWidget {
                 ],
               ),
             ),
+
             const SizedBox(height: 18),
             const Text(
               'Artikel ini adalah materi edukasi simulasi. '
-              'Informasi tidak menggantikan pemeriksaan dokter gigi.',
+              'Informasi tidak menggantikan '
+              'pemeriksaan dokter gigi.',
               style: TextStyle(fontSize: 10.5, color: C.muted, height: 1.5),
             ),
           ],
@@ -930,6 +952,10 @@ class DentalArticlePage extends StatelessWidget {
     );
   }
 }
+
+// ======================================================
+// LABEL KATEGORI ARTIKEL
+// ======================================================
 
 class ArticleTag extends StatelessWidget {
   final String label;
@@ -957,7 +983,8 @@ class ArticleTag extends StatelessWidget {
 }
 
 // ======================================================
-// ILUSTRASI GIGI CUSTOM
+// ILUSTRASI GIGI
+// DIPERTAHANKAN UNTUK KOMPATIBILITAS
 // ======================================================
 
 class DentalIllustration extends StatelessWidget {
@@ -1073,7 +1100,7 @@ class ToothPainter extends CustomPainter {
 }
 
 // ======================================================
-// BOOKING TILE
+// KARTU BOOKING
 // ======================================================
 
 class BookingTile extends StatelessWidget {
@@ -1177,6 +1204,7 @@ class BookingsTab extends StatelessWidget {
         const SizedBox(height: 25),
         const SectionTitle('Pendaftaran aktif'),
         const SizedBox(height: 13),
+
         if (store.active.isEmpty)
           EmptyView(
             icon: Icons.event_busy_outlined,
@@ -1222,6 +1250,7 @@ class HistoryTab extends StatelessWidget {
           'Kunjungan yang telah selesai di RSGM COMAL.',
         ),
         const SizedBox(height: 20),
+
         if (store.completed.isEmpty)
           const EmptyView(
             icon: Icons.history_toggle_off_rounded,
@@ -1230,6 +1259,7 @@ class HistoryTab extends StatelessWidget {
                 'Kunjungan akan muncul setelah pelayanan '
                 'dinyatakan selesai dalam simulasi.',
           ),
+
         ...store.completed.map(
           (booking) => Padding(
             padding: const EdgeInsets.only(bottom: 12),
